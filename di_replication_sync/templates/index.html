@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DI replication sync</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body data-flows-dir="{{ flows_dir }}" data-version="{{ version }}">
+
+<header class="bar">
+  <button class="brand" id="nav-home" title="back to the start">replication&nbsp;sync</button>
+  <nav class="nav">
+    <button class="nav-btn" data-view="explore">Explore</button>
+    <button class="nav-btn" data-view="wizard">Sync</button>
+  </nav>
+  <span class="dir" title="the folder this server lists flows from">{{ flows_dir }}</span>
+  <span class="spacer"></span>
+  <button id="btn-reload" title="re-read the folder">Reload</button>
+  <label class="toggle" title="themes this page only">
+    theme <select id="theme-select">
+      <option value="auto">auto</option>
+      <option value="light">light</option>
+      <option value="dark">dark</option>
+    </select>
+  </label>
+  <button id="btn-about">About</button>
+  <button id="btn-stop" class="stop" title="shut the local server down">Stop</button>
+</header>
+
+<main>
+
+  <!-- home ---------------------------------------------------------------- -->
+  <section class="view" id="view-home">
+    <h2 class="home-title">SAP Data Intelligence replication flows</h2>
+    <p class="lede">Two ways in. Both read the same folder, so a file written by
+      one shows up in the other.</p>
+
+    <div class="cards">
+      <button class="card-big" data-view="explore">
+        <span class="card-icon" aria-hidden="true">&#128194;</span>
+        <span class="card-name">Explore</span>
+        <span class="card-note">See what is in the folder. Open a flow to read
+          its tables and connections, copy the JSON out, download it, or remove
+          it.</span>
+        <span class="card-count" id="home-count"></span>
+      </button>
+
+      <button class="card-big" data-view="wizard">
+        <span class="card-icon" aria-hidden="true">&#8644;</span>
+        <span class="card-name">Sync wizard</span>
+        <span class="card-note">Compare two flows, see the gap, and promote one
+          landscape's table scope onto another — keeping the target's own
+          connections.</span>
+        <span class="card-count">Pick &rarr; Gap check &rarr; Generate &rarr; Result</span>
+      </button>
+    </div>
+
+    <p class="disclaimer">
+      <b>Unofficial tool.</b> Not affiliated with, endorsed by or supported by
+      SAP. Provided as is, without warranty of any kind — use at your own risk,
+      and check what it produces before uploading it to any system.
+    </p>
+  </section>
+
+  <!-- explore ------------------------------------------------------------- -->
+  <section class="view" id="view-explore" hidden>
+    <h2>Explore</h2>
+    <p class="lede">Everything in <code>{{ flows_dir }}</code>.</p>
+    <div id="explore-list" class="explore-list"></div>
+    <div class="actions">
+      <button id="btn-explore-sync" class="primary">Start a sync</button>
+    </div>
+  </section>
+
+  <!-- one flow ------------------------------------------------------------ -->
+  <section class="view" id="view-file" hidden>
+    <h2 id="file-title">Flow</h2>
+    <div id="file-summary" class="outcome"></div>
+
+    <div class="file-actions">
+      <button id="btn-copy" class="primary">Copy JSON</button>
+      <a id="btn-file-download" class="dl" href="#" download>Download .tgz</a>
+      <label class="toggle"><input type="checkbox" id="chk-pretty"> readable formatting</label>
+      <span class="spacer"></span>
+      <button id="btn-file-delete" class="stop">Delete…</button>
+    </div>
+    <p class="lede" id="copy-note">The exact JSON inside the archive. Paste it
+      into the other panel of a sync, or into a colleague's browser — both
+      formats are accepted on the way back in.</p>
+
+    <textarea id="file-content" class="content" readonly spellcheck="false"></textarea>
+
+    <div class="actions">
+      <button id="btn-file-back">Back</button>
+    </div>
+  </section>
+
+  <!-- wizard -------------------------------------------------------------- -->
+  <section class="view" id="view-wizard" hidden>
+  <ol class="steps" id="wizard-steps">
+    <li data-stage="pick">Pick the two flows</li>
+    <li data-stage="compare">Gap check</li>
+    <li data-stage="confirm">Confirm and generate</li>
+    <li data-stage="result">Result</li>
+  </ol>
+
+  <!-- 1 ------------------------------------------------------------------ -->
+  <section class="stage" id="stage-pick">
+    <h2><span class="step">1</span> Pick the two flows</h2>
+    <p class="lede">The <b>source</b> supplies the table scope. The <b>target</b> keeps
+      its own name and both connections, and receives that scope.</p>
+
+    <div class="panes">
+      <div class="pane" data-side="source">
+        <h3>Source <small>scope comes from here</small></h3>
+        <div class="drop" data-side="source">
+          <select class="picker" data-side="source" size="8"></select>
+          <div class="inputs">
+            <input type="file" data-side="source" hidden>
+            <button type="button" class="upload-btn" data-side="source">Upload a file…</button>
+            <button type="button" class="paste-btn" data-side="source">Paste JSON…</button>
+            <span class="hint">or drag a file onto this panel</span>
+          </div>
+          <div class="paste-box" data-side="source" hidden>
+            <textarea data-side="source" spellcheck="false"
+              placeholder="Paste the contents of &lt;FLOW&gt;.replication — the JSON inside the .tgz.&#10;Get it with:  tar -xzOf &lt;FLOW&gt;.tgz"></textarea>
+            <div class="paste-actions">
+              <button type="button" class="primary paste-use" data-side="source">Use this</button>
+              <button type="button" class="paste-cancel" data-side="source">Cancel</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" data-side="source" hidden></div>
+      </div>
+
+      <div class="arrow" aria-hidden="true">&rarr;</div>
+
+      <div class="pane" data-side="target">
+        <h3>Target <small>keeps its own identity</small></h3>
+        <div class="drop" data-side="target">
+          <select class="picker" data-side="target" size="8"></select>
+          <div class="inputs">
+            <input type="file" data-side="target" hidden>
+            <button type="button" class="upload-btn" data-side="target">Upload a file…</button>
+            <button type="button" class="paste-btn" data-side="target">Paste JSON…</button>
+            <span class="hint">or drag a file onto this panel</span>
+          </div>
+          <div class="paste-box" data-side="target" hidden>
+            <textarea data-side="target" spellcheck="false"
+              placeholder="Paste the contents of &lt;FLOW&gt;.replication — the JSON inside the .tgz.&#10;Get it with:  tar -xzOf &lt;FLOW&gt;.tgz"></textarea>
+            <div class="paste-actions">
+              <button type="button" class="primary paste-use" data-side="target">Use this</button>
+              <button type="button" class="paste-cancel" data-side="target">Cancel</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" data-side="target" hidden></div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="btn-compare" class="primary" disabled>Compare</button>
+    </div>
+  </section>
+
+  <!-- 2 ------------------------------------------------------------------ -->
+  <section class="stage" id="stage-compare" hidden>
+    <h2><span class="step">2</span> Gap check</h2>
+    <div id="verdict" class="verdict"></div>
+    <div id="headline" class="headline"></div>
+    <div id="issues-note" class="note warn" hidden></div>
+    <div id="state-note" class="note" hidden></div>
+
+    <div id="table-wrap" class="table-wrap">
+      <table id="table-diff">
+        <thead><tr><th></th><th>Table</th><th>Load type</th><th>Truncate</th><th>Note</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h3 class="sub">Connections</h3>
+    <p class="lede">Both sides, field by field. Most of these <em>should</em>
+      differ — a landscape reads its own client and writes its own bucket, and a
+      sync never copies them across. Only the space name is ever rewritten, into
+      the form that matches the connection it actually uses.</p>
+    <div class="table-wrap">
+      <table id="table-conn">
+        <thead><tr><th></th><th>Field</th><th>Source</th><th>Target</th><th>After sync</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="legend-line">
+      <span class="key match">match</span>
+      <span class="key delta">differs</span>
+      <span class="key updated">rewritten by the sync</span>
+    </p>
+
+    <div class="actions">
+      <button id="btn-back">Back</button>
+      <button id="btn-normalise" hidden
+              title="rename the target's spaces to match the connections they use">
+        Fix target space names
+      </button>
+      <button id="btn-template"
+              title="write the target's empty shell as a .tgz.template">
+        Save target as template
+      </button>
+      <button id="btn-toconfirm" class="primary">Continue to sync</button>
+    </div>
+  </section>
+
+  <!-- 3 ------------------------------------------------------------------ -->
+  <section class="stage" id="stage-confirm" hidden>
+    <h2><span class="step">3</span> Confirm and generate</h2>
+    <div id="outcome" class="outcome"></div>
+
+    <label class="toggle wide" id="writeback-row">
+      <input type="checkbox" id="chk-writeback">
+      write the result into <code id="wb-dir"></code> as
+      <input type="text" id="out-name" class="filename" spellcheck="false">
+    </label>
+
+    <div class="toggle wide" id="props-row">
+      <div class="state-head">
+        <b>Write settings</b> — format, compression, delta grouping. These
+        describe the data rather than the landscape, so the same flow should
+        write the same way wherever it runs. Connections are never copied.
+        <span id="props-summary" class="muted"></span>
+      </div>
+      <label><input type="radio" name="properties" value="source" checked>
+        <b>Take the source's</b> — move them with the flow</label>
+      <label><input type="radio" name="properties" value="target">
+        <b>Keep the target's</b> — leave them exactly as they are</label>
+    </div>
+
+    <div class="toggle wide" id="state-row">
+      <div class="state-head">
+        <code id="state-fields"></code> — a deployment setting: the target is
+        cleared of previously extracted content before the flow loads.
+        <span id="state-source" class="muted"></span>
+      </div>
+      <label><input type="radio" name="state" value="on">
+        <b>On, flow-wide</b> — every task clears the target before it loads
+        <span class="state-count" id="state-count-on"></span></label>
+      <label><input type="radio" name="state" value="off">
+        <b>Off, flow-wide</b> — no task clears the target
+        <span class="state-count" id="state-count-off"></span></label>
+      <label><input type="radio" name="state" value="copy" checked>
+        <b>Copy the source</b> — mirror it task by task, rather than flow-wide
+        <span class="state-count" id="state-count-copy"></span></label>
+    </div>
+
+    <div class="actions">
+      <button id="btn-back2">Back</button>
+      <button id="btn-apply" class="primary">Generate archive</button>
+    </div>
+
+    <div id="result" class="result" hidden></div>
+  </section>
+
+  <!-- 4 ------------------------------------------------------------------ -->
+  <section class="stage" id="stage-result" hidden>
+    <h2><span class="step">4</span> Result</h2>
+    <div id="result-banner" class="result"></div>
+    <div class="actions">
+      <button id="btn-result-open" class="primary">Open it</button>
+      <button id="btn-result-explore">Explore the folder</button>
+      <button id="btn-result-again">Sync another</button>
+    </div>
+  </section>
+  </section>
+
+</main>
+
+<div id="toast" class="toast" hidden></div>
+
+<dialog id="about-dlg">
+  <h3>DI replication sync</h3>
+  <p>Compares two SAP Data Intelligence replication-flow exports and promotes the
+     table scope of one onto the other, leaving the target's connections alone.</p>
+  <p class="disclaimer disclaimer-line"></p>
+  <p class="meta"></p>
+  <form method="dialog"><button class="primary">Close</button></form>
+</dialog>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

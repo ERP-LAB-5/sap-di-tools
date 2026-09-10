@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "di-replication-sync"
+dynamic = ["version"]
+description = "Unofficial tool to compare and promote SAP Data Intelligence replication flows between landscapes"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "AGPL-3.0-or-later"
+authors = [{ name = "D-LAB-5" }]
+keywords = ["sap", "data intelligence", "replication flow", "slt", "landscape"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Intended Audience :: System Administrators",
+    "Programming Language :: Python :: 3",
+]
+
+# replication.py is standard library only; Flask is the web front end's alone.
+# Both console scripts below are installed, so it is a dependency rather than an
+# optional extra.
+dependencies = ["flask>=3.0"]
+
+[project.urls]
+Homepage = "https://github.com/ERP-LAB-5/sap-di-tools"
+Source = "https://github.com/ERP-LAB-5/sap-di-tools"
+Issues = "https://github.com/ERP-LAB-5/sap-di-tools/issues"
+
+[project.scripts]
+di-repl-sync = "di_replication_sync.replication:main"
+di-repl-sync-web = "di_replication_sync.app:main"
+di-repl-sync-skill = "di_replication_sync.skill_install:main"
+
+[tool.setuptools]
+packages = ["di_replication_sync"]
+
+# Flask resolves templates/ and static/ relative to app.py, and __init__ reads
+# VERSION the same way, so all three have to be installed beside it. skill/
+# ships so an install can hand the agent skill over without the repository.
+[tool.setuptools.package-data]
+di_replication_sync = ["VERSION", "templates/*.html", "static/*", "skill/*.md"]
+
+[tool.setuptools.dynamic]
+version = { file = "di_replication_sync/VERSION" }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+# Use ./test.sh rather than calling pytest directly: this workstation's ROS 2
+# setup leaks pytest plugins in through PYTHONPATH that cannot import here.

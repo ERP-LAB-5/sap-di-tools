@@ -216,3 +216,18 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ---------------------------------------------------------------------------
+# Runtime data. A replication-flow export carries system ids, connection names,
+# bucket names and the full table list of whoever produced it — none of which
+# belongs in a public repository. The tools read them from a folder at runtime
+# and ship none of them.
+flows/*
+!flows/README.txt
+*.tgz
+*.tgz.template
+*.replication
+*.bk
+
+# IDE
+.idea/
