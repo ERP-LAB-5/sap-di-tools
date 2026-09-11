@@ -1,0 +1,11 @@
+{
+  "name": "di-replication-sync",
+  "version": "0.1.0",
+  "description": "Compare and promote SAP Data Intelligence replication flows between landscapes",
+  "author": {
+    "name": "D-LAB-5"
+  },
+  "homepage": "https://github.com/ERP-LAB-5/sap-di-tools",
+  "repository": "https://github.com/ERP-LAB-5/sap-di-tools",
+  "license": "GPL-3.0-or-later"
+}

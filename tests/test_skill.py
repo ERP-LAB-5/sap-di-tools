@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 D-LAB-5
 """
-The packaged skill and the checkout's copy have to stay in step.
+What the skill tells an agent has to be true of this tool, and publishing it
+must not leak anyone's landscape.
 
-A symlink between them does not survive a clone on Windows, so there are two
-real files. This is what stops them drifting.
+That the skill ships, that its copies are in step and that its frontmatter
+names the tool is checked for every template tool in tests/test_core.py.
 """
 
 from __future__ import annotations
@@ -15,28 +16,7 @@ from pathlib import Path
 import pytest
 
 from di_replication_sync import replication as r
-from di_replication_sync import skill_install
-
-CHECKOUT = (Path(__file__).resolve().parent.parent
-            / ".claude" / "skills" / skill_install.SKILL_NAME / "SKILL.md")
-
-
-def test_the_skill_ships_with_the_package():
-    assert skill_install.packaged().is_file()
-
-
-def test_the_checkout_copy_has_not_drifted():
-    assert CHECKOUT.is_file(), f"missing {CHECKOUT}"
-    assert skill_install.main(["--check", str(CHECKOUT)]) == 0
-
-
-def test_frontmatter_is_well_formed():
-    text = skill_install.packaged().read_text(encoding="utf-8")
-    match = re.match(r"^---\n(.*?)\n---\n", text, re.S)
-    assert match, "SKILL.md must open with a YAML frontmatter block"
-    front = match.group(1)
-    assert re.search(r"^name: (.+)$", front, re.M).group(1) == skill_install.SKILL_NAME
-    assert re.search(r"^description: (.+)$", front, re.M)
+from di_replication_sync.core import skill_install
 
 
 def test_every_documented_command_exists():

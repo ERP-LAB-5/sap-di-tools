@@ -9,6 +9,7 @@ description = "Unofficial tool to compare and promote SAP Data Intelligence repl
 readme = "README.md"
 requires-python = ">=3.10"
 license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 authors = [{ name = "D-LAB-5" }]
 keywords = ["sap", "data intelligence", "replication flow", "slt", "landscape"]
 classifiers = [
@@ -31,16 +32,18 @@ Issues = "https://github.com/ERP-LAB-5/sap-di-tools/issues"
 [project.scripts]
 di-repl-sync = "di_replication_sync.replication:main"
 di-repl-sync-web = "di_replication_sync.app:main"
-di-repl-sync-skill = "di_replication_sync.skill_install:main"
+di-repl-sync-skill = "di_replication_sync.core.skill_install:main"
 
 [tool.setuptools]
-packages = ["di_replication_sync"]
+packages = ["di_replication_sync", "di_replication_sync.core"]
 
-# Flask resolves templates/ and static/ relative to app.py, and __init__ reads
-# VERSION the same way, so all three have to be installed beside it. skill/
-# ships so an install can hand the agent skill over without the repository.
+# Flask resolves templates/ and static/ relative to the module that owns them,
+# and core/version.py reads VERSION beside the package, so all of it has to be
+# installed alongside the code. skill/ ships so an install can hand the agent
+# skill over without the repository. tests/test_core.py checks this list.
 [tool.setuptools.package-data]
 di_replication_sync = ["VERSION", "templates/*.html", "static/*", "skill/*.md"]
+"di_replication_sync.core" = ["static/*", "templates/core/*.html"]
 
 [tool.setuptools.dynamic]
 version = { file = "di_replication_sync/VERSION" }

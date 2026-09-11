@@ -71,8 +71,28 @@ with two ways in:
 
 ```bash
 ./run.sh --port 9000 --dir ~/exports
-./run.sh --stop
+./run.sh --stop                # run.cmd or run.ps1 on Windows, same options
 ```
+
+The header's **About** shows the installed version and checks github.com for a
+newer one. That check is one request for the `VERSION` file on main. It sends
+nothing about you or your flows, is cached for six hours, and is skipped
+silently when there is no network. `--no-update-check` turns it off. On a pip or
+pipx install, About can **update itself and restart**. From a clone it tells you
+to `git pull`. **Restart** and **Stop** are only accepted from this machine.
+Restarting drops uploads and generated archives held in the page, so it warns
+first.
+
+Installing without a clone:
+
+```bash
+pipx install git+https://github.com/ERP-LAB-5/sap-di-tools@v0.1.0
+di-repl-sync-web --dir ~/exports       # the page
+di-repl-sync check A.tgz B.tgz         # the command line
+```
+
+To update, name the new tag:
+`pipx install --force git+https://github.com/ERP-LAB-5/sap-di-tools@v0.1.0`.
 
 Same thing without a browser:
 
@@ -149,7 +169,15 @@ compare the tar inside, which is the only part DI reads back.
 
 ### Driving it from an agent
 
-A Claude Code skill ships inside the package.
+The skill teaches an agent the gap check, templates, sync and normalise. **As a
+Claude Code plugin:**
+
+```
+/plugin marketplace add ERP-LAB-5/python-tool-template
+/plugin install di-replication-sync@erp-lab-5
+```
+
+It also ships inside the package, for agents that don't use plugins:
 
 ```bash
 di-repl-sync-skill --install       # copies it into ~/.claude/skills
@@ -157,7 +185,10 @@ di-repl-sync-skill --print         # to stdout
 ```
 
 Working in a clone, `.claude/skills/di-replication-sync/SKILL.md` is already
-there and picked up automatically.
+there and picked up automatically. The packaged copy is the source.
+`plugin/skills/` and `.claude/skills/` hold identical real files (a symlink
+does not survive a clone on Windows). After editing, run
+`di-repl-sync-skill --sync`. The tests fail if the copies drift.
 
 ### Tests
 
@@ -179,13 +210,33 @@ every export it finds in `./flows` and skips when the folder is empty.
 di_replication_sync/replication.py    read / gap check / normalise / blank / sync / verify, plus the CLI
 di_replication_sync/app.py            Flask front end — moves flows, decides nothing
 di_replication_sync/templates,static  the page
-di_replication_sync/skill/            the agent skill
+di_replication_sync/skill/            the agent skill (the source copy)
+di_replication_sync/core/             shared D-LAB-5 tool core: About, update, restart, stop, page shell
+plugin/                               the Claude Code plugin (the skill)
+scripts/release.py                    one-step release
 tests/                                synthetic fixtures, plus optional checks against ./flows
 flows/                                runtime exports, git-ignored
 ```
 
 `replication.py` is standard library only, so it is usable as a library and a
 CLI without Flask.
+
+### Built on the D-LAB-5 tool template
+
+`di_replication_sync/core/`, the launchers, `test.sh`, `tests/test_core.py` and
+`scripts/release.py` come from
+[ERP-LAB-5/python-tool-template](https://github.com/ERP-LAB-5/python-tool-template),
+which also maintains metro-map-tool's shape. Take its fixes with `copier update`
+rather than editing those files here. Everything else belongs to this tool.
+
+Releasing:
+
+```bash
+python3 scripts/release.py 0.2.0 -F notes.txt --push
+```
+
+It bumps `VERSION`, the plugin manifest and this README's install pins, syncs
+the skill copies, tags, and creates the GitHub release.
 
 ---
 

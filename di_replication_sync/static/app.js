@@ -698,38 +698,14 @@ function wire() {
     stage('pick');
   });
 
-  $('#btn-about').addEventListener('click', async () => {
-    const info = await api('/api/about').catch(() => null);
-    if (info) {
-      $('#about-dlg .meta').textContent =
-        `version ${info.version} · ${info.licence}\n${info.source}\n${info.dir}`;
-      $('#about-dlg .disclaimer-line').textContent = info.disclaimer;
-    }
-    $('#about-dlg').showModal();
-  });
-
-  $('#btn-stop').addEventListener('click', async () => {
-    if (!confirm('Shut the local server down?')) return;
-    await fetch('/api/shutdown', { method: 'POST' }).catch(() => {});
-    document.body.innerHTML =
-      '<main><h2>Server stopped.</h2><p>Start it again with <code>./run.sh</code>.</p></main>';
-  });
-
-  // Theme is a per-viewer convenience, so localStorage is the right home for it
-  // — and it may be unavailable, so never let a read or write break the page.
-  const select = $('#theme-select');
-  let saved = 'auto';
-  try { saved = localStorage.getItem('di-sync-theme') || 'auto'; } catch { /* private mode */ }
-  const paint = (value) => {
-    if (value === 'auto') document.documentElement.removeAttribute('data-theme');
-    else document.documentElement.setAttribute('data-theme', value);
-  };
-  select.value = saved;
-  paint(saved);
-  select.addEventListener('change', () => {
-    paint(select.value);
-    try { localStorage.setItem('di-sync-theme', select.value); } catch { /* ignore */ }
-  });
+  // About, Restart, Stop and the theme picker are the header's, wired by
+  // core/static/core.js. Restart drops what this session holds in memory
+  // (uploads, pasted flows, generated archives), so it asks first.
+  core.setLeavingGuard((verb, go) => core.defaultLeaving(verb, go,
+    (state.source || state.target || state.generated)
+      ? '<b>Uploads, pasted flows and generated archives are held in memory</b> '
+        + 'and will be gone; download anything you need first.'
+      : ''));
 }
 
 wire();
