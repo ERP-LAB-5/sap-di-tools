@@ -191,7 +191,7 @@ CLI without Flask.
 
 ## Licence
 
-AGPL-3.0-or-later. See [LICENSE](LICENSE).
+GPL-3.0-or-later. See [LICENSE](LICENSE).
 
 SAP, SAP Data Intelligence and other SAP product names are trademarks of SAP SE.
 This project is not affiliated with SAP SE.

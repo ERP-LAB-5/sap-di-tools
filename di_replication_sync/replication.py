@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 D-LAB-5
 """
 replication.py — read, compare and sync SAP Data Intelligence replication flows.

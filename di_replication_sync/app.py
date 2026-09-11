@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (C) 2026 D-LAB-5
 """
 app.py — browser front end for replication.py.
@@ -371,7 +371,7 @@ def about() -> Response:
         "version": __version__,
         "dir": str(FLOWS_DIR),
         "source": "https://github.com/ERP-LAB-5/sap-di-tools",
-        "licence": "AGPL-3.0-or-later",
+        "licence": "GPL-3.0-or-later",
         "disclaimer":
             "Unofficial. Not affiliated with, endorsed by or supported by SAP. "
             "Provided as is, without warranty of any kind — use at your own "

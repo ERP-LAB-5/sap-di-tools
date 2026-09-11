@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Unofficial tool to compare and promote SAP Data Intelligence replication flows between landscapes"
 readme = "README.md"
 requires-python = ">=3.10"
-license = "AGPL-3.0-or-later"
+license = "GPL-3.0-or-later"
 authors = [{ name = "D-LAB-5" }]
 keywords = ["sap", "data intelligence", "replication flow", "slt", "landscape"]
 classifiers = [
