@@ -15,7 +15,10 @@
   .\run.ps1 -Stop            # just shut the running one down
   .\run.ps1 --no-update-check
 #>
-[CmdletBinding()]
+# PositionalBinding off: without it PowerShell hands the first unnamed argument
+# (say --no-update-check) to -Port by position and fails converting it to an int,
+# instead of letting it fall through to $Rest for the app.
+[CmdletBinding(PositionalBinding = $false)]
 param(
     [int]$Port = 8766,
     [string]$Bind = "127.0.0.1",
