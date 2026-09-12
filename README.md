@@ -86,13 +86,13 @@ first.
 Installing without a clone:
 
 ```bash
-pipx install git+https://github.com/ERP-LAB-5/sap-di-tools@v0.1.0
+pipx install git+https://github.com/ERP-LAB-5/sap-di-tools@v0.2.0
 di-repl-sync-web --dir ~/exports       # the page
 di-repl-sync check A.tgz B.tgz         # the command line
 ```
 
 To update, name the new tag:
-`pipx install --force git+https://github.com/ERP-LAB-5/sap-di-tools@v0.1.0`.
+`pipx install --force git+https://github.com/ERP-LAB-5/sap-di-tools@v0.2.0`.
 
 Same thing without a browser:
 

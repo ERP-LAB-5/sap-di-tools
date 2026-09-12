@@ -1,6 +1,6 @@
 {
   "name": "di-replication-sync",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Compare and promote SAP Data Intelligence replication flows between landscapes",
   "author": {
     "name": "D-LAB-5"
