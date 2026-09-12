@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2026 D-LAB-5
+// Copyright (C) 2026 ERP-LAB-5
 //
 // app.js — the three stages: pick, compare, confirm.
 //

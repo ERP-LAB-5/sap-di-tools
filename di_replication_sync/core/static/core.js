@@ -286,6 +286,143 @@
     restartNow();
   }
 
+  /* ----------------------------------------------------------- connect -- */
+
+  /** Point an agent at this tool: the config to paste, and who is connected.
+   *
+   * There is deliberately no start button. An MCP server is spawned by its
+   * client, lives on that client's stdio pipes and dies with it, so a web page
+   * has nothing to start and nothing to kill. What it can do is hand over the
+   * configuration and report traffic it has actually seen.
+   */
+  async function connectDialog() {
+    dialog(`Connect an agent to ${title()}`, `
+      <div class="agent">
+        <p class="agent-status" id="core-g-status">
+          <span class="agent-dot"></span><span id="core-g-status-text">checking…</span>
+        </p>
+        <div class="agent-pick">
+          <label for="core-g-target">Agent</label>
+          <select id="core-g-target"></select>
+        </div>
+        <p class="agent-where" id="core-g-where"></p>
+        <pre class="agent-config" id="core-g-config">…</pre>
+        <p class="core-note" id="core-g-note"></p>
+        <p class="agent-cannot" id="core-g-cannot" hidden></p>
+      </div>
+      <div class="actions">
+        <button type="button" id="core-g-copy">Copy</button>
+        <button type="button" id="core-g-write" class="warn-btn" hidden>Write the file</button>
+        <button value="cancel" class="primary">Close</button>
+      </div>`);
+
+    let info;
+    try { info = await api("GET", "/api/agent"); } catch (_) { info = null; }
+    const select = $("#core-g-target");
+    if (!select) return;                          // closed while we asked
+
+    if (!info || info.available === false) {
+      $("#core-g-config").hidden = true;
+      $("#core-g-copy").hidden = true;
+      $("#core-g-where").textContent = "";
+      $("#core-g-note").textContent =
+        (info && info.why) || "The server did not answer.";
+      select.closest(".agent-pick").hidden = true;
+      return;
+    }
+
+    showAgentStatus(info.status);
+    info.targets.forEach((t, i) => {
+      const opt = document.createElement("option");
+      opt.value = t.id;
+      opt.textContent = t.name;
+      if (i === 0) opt.selected = true;
+      select.appendChild(opt);
+    });
+
+    const show = () => {
+      const t = info.targets.find((x) => x.id === select.value);
+      if (!t) return;
+      $("#core-g-config").textContent = t.config;
+      $("#core-g-where").textContent = t.path ? t.path : "";
+      const bits = [];
+      if (t.note) bits.push(t.note);
+      if (t.instructions) {
+        bits.push(`The ${t.instructions.what} goes in ${t.instructions.path} — `
+          + `${t.instructions.how}`);
+      }
+      $("#core-g-note").textContent = bits.join(" ");
+      $("#core-g-write").hidden = !t.path;
+    };
+    select.addEventListener("change", show);
+    show();
+
+    $("#core-g-cannot").hidden = false;
+    $("#core-g-cannot").textContent =
+      "An agent starts its own copy of the MCP server, so there is nothing to "
+      + "start or stop from here. Paste the configuration into your agent and "
+      + "it connects on its next start.";
+
+    $("#core-g-copy").addEventListener("click", async () => {
+      const text = $("#core-g-config").textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        toast("Configuration copied.");
+      } catch (_) {
+        // clipboard needs a secure context and permission; selecting it is
+        // always allowed, and leaves the person one keystroke from copying
+        const pre = $("#core-g-config");
+        const range = document.createRange();
+        range.selectNodeContents(pre);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        toast("Selected — press Ctrl+C to copy.", true);
+      }
+    });
+
+    $("#core-g-write").addEventListener("click", async (ev) => {
+      const t = info.targets.find((x) => x.id === select.value);
+      if (!t || !t.path) return;
+      const btn = ev.currentTarget;
+      btn.disabled = true;
+      try {
+        const out = await api("POST", "/api/agent/write", { target: t.id });
+        toast(`Written to ${out.written_to}`);
+      } catch (err) {
+        toast((err.errors || ["could not write it"])[0], true);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  function showAgentStatus(status) {
+    const box = $("#core-g-status");
+    const text = $("#core-g-status-text");
+    if (!box || !text || !status) return;
+    box.classList.toggle("live", !!status.connected);
+    if (status.connected) {
+      const ago = status.seconds_ago;
+      const when = ago < 5 ? "just now"
+        : ago < 90 ? `${ago}s ago`
+        : `${Math.round(ago / 60)} min ago`;
+      text.textContent = `${status.client} last called ${when}.`;
+    } else {
+      text.textContent = "No agent has called this server yet.";
+    }
+  }
+
+  /** The header dot: a quiet sign that an agent is working here too. */
+  async function pollAgent() {
+    const dot = document.getElementById("core-agent-dot");
+    if (!dot) return;                             // tool built without MCP
+    try {
+      const info = await api("GET", "/api/agent");
+      dot.hidden = !(info && info.status && info.status.connected);
+    } catch (_) { dot.hidden = true; }
+  }
+
   /* ------------------------------------------------------------- wire -- */
 
   function wire() {
@@ -294,13 +431,17 @@
     if (select) select.addEventListener("change", () => applyTheme(select.value));
     const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener("click", fn); };
     on("core-about", aboutDialog);
+    on("core-connect", connectDialog);
     on("core-stop", stopServer);
     on("core-restart", restartServer);
+    // a tool without MCP has no dot and pollAgent returns at once
+    pollAgent();
+    setInterval(pollAgent, 30000);
   }
 
   window.core = {
     api, dialog, esc, toast, applyTheme,
-    aboutDialog, runUpdate, stopServer, restartServer,
+    aboutDialog, connectDialog, runUpdate, stopServer, restartServer,
     setLeavingGuard, defaultLeaving, onGone,
   };
 

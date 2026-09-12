@@ -134,6 +134,39 @@ dialog.core-dialog::backdrop { background: rgb(0 0 0 / .45); }
 .about-foot a { text-decoration: none; }
 .about-foot a:hover { text-decoration: underline; }
 
+/* ------------------------------------------------------------- connect -- */
+/* A dot on the header button when an agent has been calling: small, and only
+   there when it means something. */
+.agent-dot {
+  display: inline-block; width: 7px; height: 7px; margin-left: 6px;
+  border-radius: 50%; background: var(--ok); vertical-align: middle;
+}
+.agent-status {
+  display: flex; align-items: center; gap: 8px; margin: 0 0 4px;
+  padding: 8px 10px; border-radius: 6px; background: var(--panel-2);
+  font-size: 12px; color: var(--muted);
+}
+.agent-status .agent-dot { margin: 0; background: var(--edge); }
+.agent-status.live { color: var(--ink); }
+.agent-status.live .agent-dot { background: var(--ok); }
+.agent-pick { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.agent-pick select { flex: 1 1 auto; min-width: 0; }
+.agent-where {
+  margin: 0; font: 11px/1.6 var(--mono); color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.agent-config {
+  margin: 0; padding: 9px 10px; max-height: 190px; overflow: auto;
+  background: var(--panel-2); border: 1px solid var(--edge); border-radius: 6px;
+  font: 11px/1.5 var(--mono); white-space: pre; color: var(--ink);
+}
+/* the one thing the page genuinely cannot do, said once and quietly */
+.agent-cannot {
+  margin: 0; padding: 8px 10px; font-size: 12px; color: var(--muted);
+  border-left: 3px solid var(--edge); background: var(--panel-2);
+  border-radius: 4px;
+}
+
 /* --------------------------------------------------------------- toast -- */
 .core-toast {
   position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);

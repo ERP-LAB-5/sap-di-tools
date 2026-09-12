@@ -15,12 +15,15 @@ export PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
 if [ ! -x .venv/bin/python ]; then
   echo "  creating .venv ..."
   python3 -m venv .venv
-  .venv/bin/pip install --quiet --upgrade pip
+  .venv/bin/python -m pip install --quiet --upgrade pip
 fi
+# `python -m pip`, not `.venv/bin/pip`: that wrapper is a generated script with
+# an absolute shebang, so a venv copied in from another directory has one that
+# points nowhere. The module always belongs to the interpreter running it.
 cat requirements.txt requirements-dev.txt > .venv/.test-requirements.new
 if ! cmp -s .venv/.test-requirements.new .venv/.test-requirements.txt; then
   echo "  installing requirements ..."
-  .venv/bin/pip install --quiet -r requirements.txt -r requirements-dev.txt
+  .venv/bin/python -m pip install --quiet -r requirements.txt -r requirements-dev.txt
   mv .venv/.test-requirements.new .venv/.test-requirements.txt
   # run.sh keeps its own stamp; the runtime set is now installed too
   cp requirements.txt .venv/.requirements.txt

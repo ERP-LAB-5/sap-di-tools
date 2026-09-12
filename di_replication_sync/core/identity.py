@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 D-LAB-5
+# Copyright (C) 2026 ERP-LAB-5
 """
 identity.py — who this tool is, as far as the core needs to know.
 
@@ -13,8 +13,8 @@ TOOL_NAME = "di-replication-sync"
 PACKAGE = "di_replication_sync"
 TITLE = "DI replication sync"
 DESCRIPTION = "Compare and promote SAP Data Intelligence replication flows between landscapes"
-AUTHOR = "D-LAB-5"
-COPYRIGHT = "© 2026 D-LAB-5"
+AUTHOR = "ERP-LAB-5"
+COPYRIGHT = "© 2026 ERP-LAB-5"
 LICENCE = "GPL-3.0-or-later"
 LICENCE_URL = "https://www.gnu.org/licenses/gpl-3.0.html"
 DISCLAIMER = "Unofficial. Not affiliated with, endorsed by or supported by SAP. Provided as is, without warranty of any kind \u2014 use at your own risk, and check what it produces before uploading it anywhere."

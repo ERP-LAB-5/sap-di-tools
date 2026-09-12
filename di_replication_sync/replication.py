@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 D-LAB-5
+# Copyright (C) 2026 ERP-LAB-5
 """
 replication.py — read, compare and sync SAP Data Intelligence replication flows.
 
