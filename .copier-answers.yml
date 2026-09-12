@@ -1,0 +1,24 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v0.1.1
+_src_path: gh:ERP-LAB-5/python-tool-template
+author: D-LAB-5
+cli_command: di-repl-sync
+cli_module: replication
+coffee_url: https://www.buymeacoffee.com/dlab5
+copyright_year: 2026
+default_branch: main
+description: Compare and promote SAP Data Intelligence replication flows between landscapes
+disclaimer: Unofficial. Not affiliated with, endorsed by or supported by SAP. Provided
+    as is, without warranty of any kind — use at your own risk, and check what it
+    produces before uploading it anywhere.
+github_org: ERP-LAB-5
+package_name: di_replication_sync
+port: 8766
+repo_name: sap-di-tools
+title: DI replication sync
+tool_name: di-replication-sync
+with_mcp: false
+with_plugin: true
+with_release: true
+with_windows: true
+with_workspace: false

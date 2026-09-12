@@ -18,29 +18,28 @@ that holds the exports; upload is what you want when they are on your laptop.
 All comparing, syncing and verifying lives in replication.py; this module only
 moves flows between the browser and disk. Nothing here talks to a DI tenant —
 the generated archive is uploaded by hand, deliberately.
+
+The page shell, About (with the update check), Restart, Stop and the loopback
+guard come from core/, which the D-LAB-5 tool template maintains.
 """
 
 from __future__ import annotations
 
 import argparse
-import ipaddress
-import os
 import re
 import secrets
 import sys
-import threading
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-from flask import Flask, Response, abort, jsonify, render_template, request
-from werkzeug.serving import make_server
+from flask import Response, abort, jsonify, render_template, request
 
-from . import __version__
 from . import replication as rp
+from .core import server
+from .core.server import only_local
 
-app = Flask(__name__)
+app = server.create_app(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024      # a flow is a few KB
-app.config["JSON_SORT_KEYS"] = False
 
 HERE = Path(__file__).resolve().parent
 
@@ -60,22 +59,15 @@ NAME_RE = re.compile(r"[A-Za-z0-9._-]{1,128}$")
 _STORE: Dict[str, Tuple[str, bytes]] = {}
 _STORE_LIMIT = 64
 
+# The About box shows where this server reads flows from.
+server.about_extras(lambda: {"Flows folder": str(FLOWS_DIR)})
+
 
 # ----------------------------------------------------------------- helpers ---
-
-def only_local(what: str) -> None:
-    """Local tool, local kill switch.
-
-    Only a loopback client may stop the server or write into the flows folder,
-    so a page in another tab cannot navigate the server into changing files.
-    """
-    try:
-        caller = ipaddress.ip_address(request.remote_addr or "")
-    except ValueError:
-        abort(403, f"{what} is only available to a local client")
-    if not caller.is_loopback:
-        abort(403, f"{what} is only available to a local client")
-
+#
+# only_local (from core.server) guards every write into the flows folder, as
+# well as shutdown, restart and update: a page in another tab cannot navigate
+# the server into changing files.
 
 def flow_path(name: str) -> Path:
     """Resolve a file name to a path inside the flows folder, or refuse it."""
@@ -129,8 +121,13 @@ def describe(flow: rp.Flow, source_name: Optional[str]) -> Dict[str, Any]:
 
 @app.get("/")
 def index() -> str:
-    return render_template("index.html", version=__version__,
-                           flows_dir=str(FLOWS_DIR))
+    return render_template("index.html", flows_dir=str(FLOWS_DIR))
+
+
+@app.get("/favicon.ico")
+def favicon():
+    """Browsers ask for this by name whatever the page links to."""
+    return app.send_static_file("favicon.svg")
 
 
 @app.get("/api/flows")
@@ -365,29 +362,6 @@ def download(handle: str) -> Response:
     })
 
 
-@app.get("/api/about")
-def about() -> Response:
-    return jsonify({
-        "version": __version__,
-        "dir": str(FLOWS_DIR),
-        "source": "https://github.com/ERP-LAB-5/sap-di-tools",
-        "licence": "GPL-3.0-or-later",
-        "disclaimer":
-            "Unofficial. Not affiliated with, endorsed by or supported by SAP. "
-            "Provided as is, without warranty of any kind — use at your own "
-            "risk, and check what it produces before uploading it anywhere.",
-    })
-
-
-@app.post("/api/shutdown")
-def shutdown() -> Response:
-    """Stop the server — the red button in the toolbar."""
-    only_local("shutdown")
-    # answer first, exit a beat later; werkzeug has no in-request shutdown hook
-    threading.Timer(0.4, lambda: os._exit(0)).start()
-    return jsonify({"stopping": True})
-
-
 # -------------------------------------------------------------------- main ---
 
 def main(argv: Optional[list] = None) -> int:
@@ -396,13 +370,11 @@ def main(argv: Optional[list] = None) -> int:
     ap = argparse.ArgumentParser(
         prog="di-repl-sync-web",
         description="Browser front end for the DI replication-flow sync.")
-    ap.add_argument("--host", default="127.0.0.1")
-    ap.add_argument("--port", type=int, default=8766)
-    ap.add_argument("--flows-dir", default="flows",
+    server.add_server_args(ap)
+    # --dir is what run.sh used to accept itself; it now arrives here as it is
+    ap.add_argument("--flows-dir", "--dir", default="flows",
                     help="folder holding the .tgz exports (default: ./flows)")
-    ap.add_argument("--debug", action="store_true")
-    ap.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    args = ap.parse_args(argv)
+    args = ap.parse_args(sys.argv[1:] if argv is None else argv)
 
     FLOWS_DIR = Path(args.flows_dir).expanduser().resolve()
     if not FLOWS_DIR.exists() and args.flows_dir == "flows":
@@ -411,31 +383,12 @@ def main(argv: Optional[list] = None) -> int:
         print(f"  ! no such folder: {FLOWS_DIR}", file=sys.stderr)
         return 2
 
-    # flush=True throughout: stdout is block-buffered when redirected to a log,
-    # and a startup line that appears four kilobytes later is no use to anyone.
-    say = lambda line: print(line, flush=True)
-    say(f"  flows folder  {FLOWS_DIR}")
-    say(f"  listening on  http://{args.host}:{args.port}")
-    if args.host not in ("127.0.0.1", "localhost", "::1"):
-        say("    reachable from the network — shutdown and folder writes stay "
-            "refused to non-local clients; reading the flows does not.")
-    say("  unofficial tool, no warranty — see the About box")
-
-    if args.debug:
-        app.run(host=args.host, port=args.port, debug=True)
-        return 0
-
-    # make_server rather than app.run: app.run goes through run_simple, which
-    # calls log_startup and prints werkzeug's "this is a development server"
-    # banner. That warning is for someone deploying a web app; this is a local
-    # single-user tool bound to loopback, and the banner only obscures the two
-    # lines above that actually matter.
-    server = make_server(args.host, args.port, app, threaded=True)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        say("\n  stopped")
-    return 0
+    return server.serve(
+        app, args,
+        lines=[f"  flows folder  {FLOWS_DIR}",
+               "  unofficial tool, no warranty — see the About box"],
+        network_note="    Shutdown, restart, update and folder writes stay refused "
+                     "to them; reading the flows does not.")
 
 
 if __name__ == "__main__":

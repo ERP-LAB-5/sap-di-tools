@@ -1,34 +1,33 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>DI replication sync</title>
-<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body data-flows-dir="{{ flows_dir }}" data-version="{{ version }}">
+{% extends "core/_base.html" %}
 
-<header class="bar">
+{#- The header's theme picker, About, Restart and Stop, the favicon link and
+    core.js come from core/_base.html (the D-LAB-5 tool template). -#}
+
+{% block title %}DI replication sync{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+{% endblock %}
+
+{% block body_attrs %}data-flows-dir="{{ flows_dir }}"{% endblock %}
+
+{% block brand %}
   <button class="brand" id="nav-home" title="back to the start">replication&nbsp;sync</button>
+{% endblock %}
+
+{% block toolbar %}
   <nav class="nav">
     <button class="nav-btn" data-view="explore">Explore</button>
     <button class="nav-btn" data-view="wizard">Sync</button>
   </nav>
   <span class="dir" title="the folder this server lists flows from">{{ flows_dir }}</span>
-  <span class="spacer"></span>
-  <button id="btn-reload" title="re-read the folder">Reload</button>
-  <label class="toggle" title="themes this page only">
-    theme <select id="theme-select">
-      <option value="auto">auto</option>
-      <option value="light">light</option>
-      <option value="dark">dark</option>
-    </select>
-  </label>
-  <button id="btn-about">About</button>
-  <button id="btn-stop" class="stop" title="shut the local server down">Stop</button>
-</header>
+{% endblock %}
 
+{% block toolbar_end %}
+  <button id="btn-reload" title="re-read the folder">Reload</button>
+{% endblock %}
+
+{% block main %}
 <main>
 
   <!-- home ---------------------------------------------------------------- -->
@@ -275,16 +274,8 @@
 </main>
 
 <div id="toast" class="toast" hidden></div>
+{% endblock %}
 
-<dialog id="about-dlg">
-  <h3>DI replication sync</h3>
-  <p>Compares two SAP Data Intelligence replication-flow exports and promotes the
-     table scope of one onto the other, leaving the target's connections alone.</p>
-  <p class="disclaimer disclaimer-line"></p>
-  <p class="meta"></p>
-  <form method="dialog"><button class="primary">Close</button></form>
-</dialog>
-
+{% block scripts %}
 <script src="{{ url_for('static', filename='app.js') }}"></script>
-</body>
-</html>
+{% endblock %}
