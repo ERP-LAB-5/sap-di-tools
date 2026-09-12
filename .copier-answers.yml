@@ -1,7 +1,7 @@
 # Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
-_commit: v0.1.1
+_commit: v0.3.0
 _src_path: gh:ERP-LAB-5/python-tool-template
-author: D-LAB-5
+author: ERP-LAB-5
 cli_command: di-repl-sync
 cli_module: replication
 coffee_url: https://www.buymeacoffee.com/dlab5
@@ -17,6 +17,7 @@ port: 8766
 repo_name: sap-di-tools
 title: DI replication sync
 tool_name: di-replication-sync
+web_command: di-repl-sync-web
 with_mcp: false
 with_plugin: true
 with_release: true

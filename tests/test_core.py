@@ -17,7 +17,7 @@ import pytest
 
 from di_replication_sync import app as web
 from di_replication_sync import replication as cli
-from di_replication_sync.core import identity, skill_install, version
+from di_replication_sync.core import agent, identity, skill_install, version
 
 ROOT = Path(__file__).resolve().parent.parent
 PKG = ROOT / identity.PACKAGE
@@ -83,6 +83,82 @@ def test_network_detection():
     from di_replication_sync.core.server import on_a_network
     assert not on_a_network("127.0.0.1") and not on_a_network("localhost")
     assert on_a_network("0.0.0.0") and on_a_network("192.168.1.5")
+
+
+# ----------------------------------------------------------------- agent ----
+#
+# These exist because the panel is only as good as the config it hands over: a
+# snippet naming a module that was never generated, or a write that throws away
+# somebody else's servers, would both look fine on screen.
+
+def test_agent_route_answers(client):
+    got = client.get("/api/agent").get_json()
+    assert got["tool"] == identity.TOOL_NAME
+    assert got["available"] is bool(identity.WITH_MCP)
+
+
+@pytest.mark.skipif(not identity.WITH_MCP, reason="tool built without MCP")
+def test_every_target_configures_the_module_that_exists(client):
+    got = client.get("/api/agent").get_json()
+    assert got["targets"], "an MCP tool should offer somewhere to connect from"
+    for target in got["targets"]:
+        entry = json.loads(target["config"])
+        key = next(iter(entry))
+        assert key in ("mcpServers", "servers")
+        mine = entry[key][identity.TOOL_NAME]
+        # the module has to be the one the package actually ships
+        assert mine["args"][:2] == ["-m", f"{identity.PACKAGE}.mcp_server"]
+        assert Path(mine["command"]).is_absolute(), "an agent has its own PATH"
+    assert (PKG / "mcp_server.py").is_file()
+
+
+@pytest.mark.skipif(not identity.WITH_MCP, reason="tool built without MCP")
+def test_writing_a_config_keeps_servers_that_are_already_there():
+    existing = json.dumps({"mcpServers": {"someone-else": {"command": "x"}}})
+    merged = json.loads(agent.merge_into(existing, "claude-code"))
+    assert "someone-else" in merged["mcpServers"], "never drop another server"
+    assert identity.TOOL_NAME in merged["mcpServers"]
+
+
+@pytest.mark.skipif(not identity.WITH_MCP, reason="tool built without MCP")
+def test_writing_a_config_replaces_only_our_own_entry():
+    first = agent.merge_into("", "claude-code")
+    twice = agent.merge_into(first, "claude-code")
+    assert json.loads(twice) == json.loads(first), "writing twice is the same"
+
+
+@pytest.mark.skipif(not identity.WITH_MCP, reason="tool built without MCP")
+def test_the_vscode_shape_differs_from_the_claude_one():
+    # the whole reason this module exists: same server, two spellings
+    assert "servers" in json.loads(agent.snippet("vscode"))
+    assert "mcpServers" in json.loads(agent.snippet("claude-code"))
+    assert json.loads(agent.snippet("vscode"))["servers"][identity.TOOL_NAME]["type"] == "stdio"
+
+
+def test_writing_a_config_is_refused_from_off_the_machine(client):
+    got = client.post("/api/agent/write", json={"target": "claude-code"},
+                      environ_base=FAR_AWAY)
+    assert got.status_code == 403
+
+
+def test_an_unknown_target_is_refused(client):
+    got = client.post("/api/agent/write", json={"target": "no-such-agent"},
+                      environ_base=LOCAL)
+    assert got.status_code == 400
+
+
+def test_an_agent_calling_marks_itself_seen(client):
+    assert client.get("/api/agent").get_json()["status"]["connected"] is False
+    client.get("/api/health", headers={"X-Agent": "test-harness"})
+    status = client.get("/api/agent").get_json()["status"]
+    assert status["connected"] is True and status["client"] == "test-harness"
+    # and the page must never claim it can start one
+    assert status["startable"] is False
+
+
+def test_the_page_offers_connect_only_when_there_is_an_mcp_server(client):
+    html = client.get("/").get_data(as_text=True)
+    assert ('id="core-connect"' in html) is bool(identity.WITH_MCP)
 
 
 # ------------------------------------------------------------- packaging ----

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-# Copyright (C) 2026 D-LAB-5
+# Copyright (C) 2026 ERP-LAB-5
 """Sync SAP Data Intelligence replication flows between landscapes.
 
     replication  the engine and the di-repl-sync command line, standard library only

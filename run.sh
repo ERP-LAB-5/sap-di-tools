@@ -65,11 +65,16 @@ fi
 if [ ! -x .venv/bin/python ]; then
   echo "  creating .venv ..."
   python3 -m venv .venv
-  .venv/bin/pip install --quiet --upgrade pip
+  .venv/bin/python -m pip install --quiet --upgrade pip
 fi
+# `python -m pip` rather than `.venv/bin/pip`: that wrapper is a generated
+# script carrying an absolute shebang, so a venv that was copied from another
+# directory has one that points nowhere and fails with "cannot execute:
+# required file not found". The module always belongs to the interpreter
+# running it.
 if ! cmp -s requirements.txt .venv/.requirements.txt; then
   echo "  installing requirements ..."
-  .venv/bin/pip install --quiet -r requirements.txt
+  .venv/bin/python -m pip install --quiet -r requirements.txt
   cp requirements.txt .venv/.requirements.txt
 fi
 

@@ -35,6 +35,7 @@ from typing import Callable, Dict, Iterable, List, Optional
 from flask import Blueprint, Flask, abort, jsonify, request
 from werkzeug.exceptions import HTTPException
 
+from . import agent
 from . import identity
 from . import version as ver
 
@@ -62,7 +63,17 @@ def create_app(import_name: str, **flask_kwargs) -> Flask:
 
     @app.context_processor
     def _identity():
-        return {"tool": identity, "version": ver.__version__}
+        return {"tool": identity, "version": ver.__version__,
+                "with_mcp": agent.available()}
+
+    @app.before_request
+    def _note_agent():
+        # An MCP server names itself on every call (core.mcp_bridge). That is
+        # the only way the page can know an agent is working here: a stdio
+        # server has no port to find and no pid to look up.
+        client = request.headers.get("X-Agent")
+        if client:
+            agent.seen(client)
 
     @app.errorhandler(HTTPException)
     def _as_json(exc: HTTPException):
@@ -131,6 +142,34 @@ def version_info():
         "web_command": identity.WEB_COMMAND,
         "extras": extras,
     })
+
+
+@bp.get("/api/agent")
+def agent_info():
+    """How to point an agent at this tool, and whether one is talking to us."""
+    return jsonify(agent.describe())
+
+
+@bp.post("/api/agent/write")
+def agent_write():
+    """Write one client's config file, after the person asked for that file.
+
+    Loopback only, like every other route that writes: this puts a file
+    somewhere of the caller's choosing. The path is not taken from the request
+    -- only the target id is -- so a page cannot name an arbitrary file.
+    """
+    only_local("writing an agent configuration")
+    data = request.get_json(silent=True) or {}
+    found = agent.target(str(data.get("target") or ""))
+    if found is None or not agent.available():
+        abort(400, "no such agent target")
+    if not found["path"]:
+        abort(400, f"{found['name']} has no configuration file to write")
+    try:
+        written = agent.write_config(str(found["id"]))
+    except OSError as exc:
+        abort(500, f"could not write it: {exc}")
+    return jsonify({"written_to": written, "target": found["id"]})
 
 
 @bp.post("/api/shutdown")

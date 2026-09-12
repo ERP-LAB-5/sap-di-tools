@@ -4,11 +4,17 @@
 skill_install.py — put the agent skill where an agent will find it.
 
 The skill travels inside the package, so a pip or pipx install already has it;
-what it does not have is a copy under ~/.claude/skills, which is where Claude
-Code looks when the tool is not installed as a plugin. This command bridges that.
+what it does not have is a copy where the agent looks. This command bridges that.
+
+Agents differ only in where they keep instructions: Claude Code reads
+~/.claude/skills, Copilot reads .github/copilot-instructions.md, Cursor has its
+own rules folder. core.agent knows all of them, so --for names the agent and
+this command follows that convention rather than assuming every agent is Claude.
 
     <tool>-skill                     # where the packaged copy lives
     <tool>-skill --install           # copy it to ~/.claude/skills/<name>
+    <tool>-skill --install --for vscode   # as .github/copilot-instructions.md
+    <tool>-skill --install --for cursor   # as .cursor/rules/<name>.mdc
     <tool>-skill --install --force
     <tool>-skill --print             # write it to stdout
     <tool>-skill --check [FILE ...]  # have other copies drifted from this one?
@@ -43,7 +49,20 @@ def packaged() -> Path:
     return Path(__file__).resolve().parent.parent / "skill" / "SKILL.md"
 
 
-def destination() -> Path:
+def destination(target_id: str = "claude-code") -> Path:
+    """Where this agent keeps the instructions it reads.
+
+    Claude Code has ~/.claude/skills; Copilot reads .github/copilot-instructions.md;
+    Cursor has its own rules folder. core.agent knows all of them, so the
+    convention lives there and this command follows it rather than assuming
+    every agent is Claude.
+    """
+    if target_id != "claude-code":
+        from . import agent
+        found = agent.target(target_id)
+        if found is None or not found.get("instructions"):
+            raise KeyError(target_id)
+        return Path(str(found["instructions"]["path"]))
     return Path.home() / ".claude" / "skills" / SKILL_NAME / "SKILL.md"
 
 
@@ -62,7 +81,11 @@ def main(argv: List[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog=identity.SKILL_COMMAND,
                                  description=__doc__.splitlines()[1])
     ap.add_argument("--install", action="store_true",
-                    help="copy the skill into ~/.claude/skills")
+                    help="copy the skill where the agent reads it")
+    ap.add_argument("--for", dest="agent_id", default="claude-code",
+                    metavar="AGENT",
+                    help="which agent to install it for: claude-code (default), "
+                         "vscode, cursor")
     ap.add_argument("--force", action="store_true",
                     help="overwrite a skill that is already installed")
     ap.add_argument("--print", dest="show", action="store_true",
@@ -119,7 +142,16 @@ def main(argv: List[str] | None = None) -> int:
         print(src)
         return 0
 
-    dest = destination()
+    try:
+        dest = destination(args.agent_id)
+    except KeyError:
+        # naming an agent we cannot place the skill for is a typo or a client
+        # that keeps no instructions file; either way, say which ones work
+        from . import agent as agents
+        known = [t["id"] for t in agents.targets() if t.get("instructions")]
+        print(f"  ! no skill location for '{args.agent_id}' — try: "
+              + ", ".join(known), file=sys.stderr)
+        return 2
     if dest.exists() and not args.force:
         same = filecmp.cmp(src, dest, shallow=False)
         print(f"  {dest} already exists"
