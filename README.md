@@ -173,7 +173,7 @@ The skill teaches an agent the gap check, templates, sync and normalise. **As a
 Claude Code plugin:**
 
 ```
-/plugin marketplace add ERP-LAB-5/python-tool-template
+/plugin marketplace add ERP-LAB-5/darkfactory
 /plugin install di-replication-sync@erp-lab-5
 ```
 
